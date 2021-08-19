@@ -69,6 +69,9 @@ package cardano-node-chairman
 package cardano-testnet
   tests: True
 
+package trace-resources
+  tests: False
+
 package trace-dispatcher
   tests: True
 
