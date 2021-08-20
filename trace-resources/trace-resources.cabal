@@ -49,3 +49,28 @@ library
     exposed-modules:   Cardano.Logging.Resources.Darwin
     c-sources:         src/Cardano/Logging/Resources/os-support-darwin.c
     include-dirs:      src/Cardano/Logging/Resources/
+
+test-suite trace-resources-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             trace-resources-test.hs
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
+  build-depends:       base >=4.12 && <5
+                      , trace-dispatcher
+                      , text
+                      , aeson
+                      , QuickCheck
+                      , tasty
+                      , tasty-quickcheck
+                      , trace-resources
+  ghc-options:        "-with-rtsopts=-T"                                 
+                       -Wall
+                       -Wcompat
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wpartial-fields
+                       -Widentities
+                       -Wredundant-constraints
+                       -Wmissing-export-lists
+                       -Wno-incomplete-patterns

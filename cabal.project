@@ -70,7 +70,7 @@ package cardano-testnet
   tests: True
 
 package trace-resources
-  tests: False
+  tests: True
 
 package trace-dispatcher
   tests: True
