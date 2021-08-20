@@ -160,7 +160,7 @@ readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
     }
  where
    usecsToCenti :: ULONGLONG -> Word64
-   usecsToCenti = `div` 10000
+   usecsToCenti ul = ul `div` 10000
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
 
