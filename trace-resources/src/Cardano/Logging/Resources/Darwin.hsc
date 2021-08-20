@@ -8,7 +8,7 @@ module Cardano.Logging.Resources.Darwin
 #include "os-support-darwin.h"
 
 import           Data.Foldable (foldrM)
-import           Data.Word (Word32, Word8)
+import           Data.Word (Word32, Word8, Word64)
 import           Data.Text (pack)
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc
@@ -17,6 +17,7 @@ import           Foreign.Storable
 import qualified GHC.Stats as GhcStats
 import           System.Posix.Process (getProcessID)
 import           System.Posix.Types (ProcessID)
+import           Cardano.Logging.Resources.Types
 
 {- type aliases -}
 type MACH_VM_SIZE_T = Word64
@@ -92,7 +93,7 @@ readRessoureStatsInternal = getProcessID >>= \pid -> do
   rts <- GhcStats.getRTSStats
   mem <- getMemoryInfo pid
   pure . Just $
-    Resources
+    ResourceStats
     { rCentiCpu   = timeValToCenti (_user_time cpu)
                   + timeValToCenti (_system_time cpu)
     , rCentiGC    = nsToCenti $ GhcStats.gc_cpu_ns rts
