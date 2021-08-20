@@ -64,7 +64,7 @@ test-suite trace-resources-test
                       , tasty
                       , tasty-quickcheck
                       , trace-resources
-  ghc-options:        "-with-rtsopts=-T"                                 
+  ghc-options:        "-with-rtsopts=-T"
                        -Wall
                        -Wcompat
                        -Wincomplete-uni-patterns

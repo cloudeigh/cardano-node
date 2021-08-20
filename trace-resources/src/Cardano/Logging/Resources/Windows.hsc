@@ -4,8 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Logging.Counters.Windows
-    (
-    , readRessoureStatsInternal
+    ( readRessoureStatsInternal
     ) where
 
 

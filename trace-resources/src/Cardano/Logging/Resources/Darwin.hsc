@@ -7,9 +7,7 @@ module Cardano.Logging.Resources.Darwin
 
 #include "os-support-darwin.h"
 
-import           Data.Foldable (foldrM)
-import           Data.Word (Word32, Word8, Word64)
-import           Data.Text (pack)
+import           Data.Word (Word64)
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
@@ -102,7 +100,7 @@ readRessoureStatsInternal = getProcessID >>= \pid -> do
     , rGcsMinor   = fromIntegral $ GhcStats.gcs rts - GhcStats.major_gcs rts
     , rAlloc      = GhcStats.allocated_bytes rts
     , rLive       = GhcStats.gcdetails_live_bytes $ GhcStats.gc rts
-    , rRSS        = fromIntegral (_resident_size mem)
+    , rRSS        = _resident_size mem
     , rCentiBlkIO = 0
     , rThreads    = 0
     }
@@ -110,7 +108,7 @@ readRessoureStatsInternal = getProcessID >>= \pid -> do
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
    timeValToCenti :: TIME_VALUE_T -> Word64
-   timeValToCenti = fromIntegral . (`div` 10000) . usFromTimeValue
+   timeValToCenti = 10000 `div` usFromTimeValue
 
 usFromTimeValue :: TIME_VALUE_T -> Word64
 usFromTimeValue (TIME_VALUE_T s us) = s * 1000000 + us
