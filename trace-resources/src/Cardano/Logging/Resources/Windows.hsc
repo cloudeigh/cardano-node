@@ -3,7 +3,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Logging.Counters.Windows
+module Cardano.Logging.Resources.Windows
     ( readRessoureStatsInternal
     ) where
 

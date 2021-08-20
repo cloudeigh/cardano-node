@@ -108,7 +108,7 @@ readRessoureStatsInternal = getProcessID >>= \pid -> do
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
    timeValToCenti :: TIME_VALUE_T -> Word64
-   timeValToCenti = 10000 `div` usFromTimeValue
+   timeValToCenti tv = 10000 `div` (usFromTimeValue tv)
 
 usFromTimeValue :: TIME_VALUE_T -> Word64
 usFromTimeValue (TIME_VALUE_T s us) = s * 1000000 + us
