@@ -111,3 +111,6 @@ readRessoureStatsInternal = getProcessID >>= \pid -> do
    nsToCenti = fromIntegral . (`div` 10000000)
    timeValToCenti :: TIME_VALUE_T -> Word64
    timeValToCenti = fromIntegral . (`div` 10000) . usFromTimeValue
+
+usFromTimeValue :: TIME_VALUE_T -> Word64
+usFromTimeValue (TIME_VALUE_T s us) = s * 1000000 + us
