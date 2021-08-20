@@ -9,8 +9,6 @@ module Cardano.Logging.Resources.Windows
 
 
 import           Data.Word (Word64)
-import           Data.Foldable (foldrM)
--- import           Foreign.C.String
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc
 import           Foreign.Ptr
@@ -113,12 +111,10 @@ instance Storable IOCounters where
                 <*> (#peek IO_COUNTERS, OtherTransferCount) ptr
   poke _ _    = pure ()
 
-foreign import ccall unsafe c_get_io_counters :: Ptr IOCounters -> CInt -> IO CInt
-
 data CpuTimes = CpuTimes {
     usertime :: ULONGLONG
   , systime :: ULONGLONG
-  , idletime :: ULONGLONG
+  , _idletime :: ULONGLONG
   }
 
 instance Storable CpuTimes where
@@ -130,11 +126,7 @@ instance Storable CpuTimes where
                 <*> (#peek CPU_TIMES, idletime) ptr
   poke _ _    = pure ()
 
-foreign import ccall unsafe c_get_sys_cpu_times :: Ptr CpuTimes -> IO CInt
 foreign import ccall unsafe c_get_proc_cpu_times :: Ptr CpuTimes -> CInt -> IO CInt
-
-foreign import ccall unsafe c_get_win_bits :: CInt -> IO CInt
-
 
 
 getMemoryInfo :: ProcessId -> IO ProcessMemoryCounters
@@ -168,7 +160,7 @@ readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
     }
  where
    usecsToCenti :: ULONGLONG -> Word64
-   usecsToCenti = fromIntegral . (`div` 10000)
+   usecsToCenti = `div` 10000
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
 
