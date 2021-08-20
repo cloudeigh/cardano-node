@@ -8,6 +8,7 @@ module Cardano.Logging.Resources.Windows
     ) where
 
 
+import           Data.Word (Word64)
 import           Data.Foldable (foldrM)
 -- import           Foreign.C.String
 import           Foreign.C.Types
@@ -112,58 +113,6 @@ instance Storable IOCounters where
 
 foreign import ccall unsafe c_get_io_counters :: Ptr IOCounters -> CInt -> IO CInt
 
-
-{- system information -}
-  {-
-typedef struct _SYSTEM_INFO {
-    union {
-        DWORD dwOemId;          // Obsolete field...do not use
-        struct {
-            WORD wProcessorArchitecture;
-            WORD wReserved;
-        } DUMMYSTRUCTNAME;
-    } DUMMYUNIONNAME;
-    DWORD dwPageSize;
-    LPVOID lpMinimumApplicationAddress;
-    LPVOID lpMaximumApplicationAddress;
-    DWORD_PTR dwActiveProcessorMask;
-    DWORD dwNumberOfProcessors;
-    DWORD dwProcessorType;
-    DWORD dwAllocationGranularity;
-    WORD wProcessorLevel;
-    WORD wProcessorRevision;
-} SYSTEM_INFO, *LPSYSTEM_INFO; -}
-
-data SystemInfo = SystemInfo
-  { --_dummy :: DWORD
-    _dwPageSize :: DWORD
-  --, _lpMinimumApplicationAddress :: LPVOID
-  --, _lpMaximumApplicationAddress :: LPVOID
-  --, _dwActiveProcessorMask :: DWORD_PTR
-  , _dwNumberOfProcessors :: DWORD
-  , _dwProcessorType :: DWORD
-  , _dwAllocationGranularity :: DWORD
-  , _wProcessorLevel :: WORD
-  , _wProcessorRevision :: WORD
-  }
-
-instance Storable SystemInfo where
-  alignment _ = #const offsetof(struct {char x__; SYSTEM_INFO (y__); }, y__)
-  sizeOf _    = #size SYSTEM_INFO
-  peek ptr    = SystemInfo
-                <$> (#peek SYSTEM_INFO, dwPageSize) ptr
-                -- <*> (#peek SYSTEM_INFO, lpMinimumApplicationAddress) ptr
-                -- <*> (#peek SYSTEM_INFO, lpMaximumApplicationAddress) ptr
-                -- <*> (#peek SYSTEM_INFO, dwActiveProcessorMask) ptr
-                <*> (#peek SYSTEM_INFO, dwNumberOfProcessors) ptr
-                <*> (#peek SYSTEM_INFO, dwProcessorType) ptr
-                <*> (#peek SYSTEM_INFO, dwAllocationGranularity) ptr
-                <*> (#peek SYSTEM_INFO, wProcessorLevel) ptr
-                <*> (#peek SYSTEM_INFO, wProcessorRevision) ptr
-  poke _ _    = pure ()
-
-foreign import ccall unsafe c_get_system_info:: Ptr SystemInfo -> IO CInt
-
 data CpuTimes = CpuTimes {
     usertime :: ULONGLONG
   , systime :: ULONGLONG
@@ -184,53 +133,7 @@ foreign import ccall unsafe c_get_proc_cpu_times :: Ptr CpuTimes -> CInt -> IO C
 
 foreign import ccall unsafe c_get_win_bits :: CInt -> IO CInt
 
-{-  -}
 
-readCounters :: SubTrace -> IO [Counter]
-readCounters NoTrace                   = return []
-readCounters Neutral                   = return []
-readCounters (TeeTrace _)              = return []
-readCounters (FilterTrace _)           = return []
-readCounters UntimedTrace              = return []
-readCounters DropOpening               = return []
-readCounters (SetSeverity _)           = return []
-
-readCounters (ObservableTraceSelf tts) = do
-    pid <- getCurrentProcessId
-    takeMeasurements pid tts
-readCounters (ObservableTrace _pid _tts) = return []
-
-takeMeasurements :: ProcessId -> [ObservableInstance] -> IO [Counter]
-takeMeasurements pid tts =
-    foldrM (\(sel, fun) a ->
-       if any (== sel) tts
-       then (fun >>= \xs -> return $ a ++ xs)
-       else return a) [] selectors
-  where
-    selectors = [ (MonotonicClock, getMonoClock)
-                , (SysStats, readSysStats pid)
-                , (MemoryStats, readProcMem pid)
-                , (ProcessStats, readProcStats pid)
-                , (NetStats, readProcNet pid)
-                , (IOStats, readProcIO pid)
-                , (GhcRtsStats, readRTSStats)
-                ]
-
-
-readProcMem :: ProcessId -> IO [Counter]
-readProcMem pid = do
-    meminfo <- getMemoryInfo pid
-    return [ Counter MemoryCounter "Pid" (PureI $ fromIntegral pid)
-           , Counter MemoryCounter "WorkingSetSize" (PureI $ fromIntegral (_workingSetSize meminfo))
-           , Counter MemoryCounter "PeakWorkingSetSize" (PureI $ fromIntegral (_peakWorkingSetSize meminfo))
-           , Counter MemoryCounter "QuotaPeakPagedPoolUsage" (PureI $ fromIntegral (_quotaPeakPagedPoolUsage meminfo))
-           , Counter MemoryCounter "QuotaPagedPoolUsage" (PureI $ fromIntegral (_quotaPagedPoolUsage meminfo))
-           , Counter MemoryCounter "QuotaPeakNonPagedPoolUsage" (PureI $ fromIntegral (_quotaPeakNonPagedPoolUsage meminfo))
-           , Counter MemoryCounter "QuotaNonPagedPoolUsage" (PureI $ fromIntegral (_quotaNonPagedPoolUsage meminfo))
-           , Counter MemoryCounter "PagefileUsage" (PureI $ fromIntegral (_pagefileUsage meminfo))
-           , Counter MemoryCounter "PeakPagefileUsage" (PureI $ fromIntegral (_peakPagefileUsage meminfo))
-           , Counter MemoryCounter "PageFaultCount" (PureI $ fromIntegral (_pageFaultCount meminfo))
-           ]
 
 getMemoryInfo :: ProcessId -> IO ProcessMemoryCounters
 getMemoryInfo pid =
@@ -242,53 +145,6 @@ getMemoryInfo pid =
         return $ ProcessMemoryCounters 0 0 0 0 0 0 0 0 0 0
       else
         peek ptr
-
-
-
-readSysStats :: ProcessId -> IO [Counter]
-readSysStats pid = do
-    sysinfo <- getSysInfo
-    cputimes <- getSysCpuTimes
-    winbits <- getWinBits
-    return [ Counter SysInfo "Pid" (PureI $ fromIntegral pid)
-           , Counter SysInfo "Platform" (PureI $ fromIntegral $ fromEnum Windows)
-           , Counter SysInfo "CpuCount" (PureI $ fromIntegral $ _dwNumberOfProcessors sysinfo)
-           , Counter SysInfo "PageSize" (PureI $ fromIntegral $ _dwPageSize sysinfo)
-           , Counter SysInfo "ProcessorType" (PureI $ fromIntegral $ _dwProcessorType sysinfo)
-           , Counter SysInfo "AllocationGranularity" (PureI $ fromIntegral $ _dwAllocationGranularity sysinfo)
-           , Counter SysInfo "ProcessorLevel" (PureI $ fromIntegral $ _wProcessorLevel sysinfo)
-           , Counter SysInfo "ProcessorRevision" (PureI $ fromIntegral $ _wProcessorRevision sysinfo)
-           , Counter SysInfo "SysUserTime" (Microseconds $ usertime cputimes)
-           , Counter SysInfo "KernelTime" (Microseconds $ systime cputimes)
-           , Counter SysInfo "CPUTime" (Microseconds $ (systime cputimes + usertime cputimes))
-           , Counter SysInfo "IdleTime" (Microseconds $ idletime cputimes)
-           , Counter SysInfo "WindowsPlatformBits" (PureI $ fromIntegral winbits)
-           ]
-  where
-    getWinBits :: IO CInt
-    getWinBits = c_get_win_bits (fromIntegral pid)
-    getSysCpuTimes :: IO CpuTimes
-    getSysCpuTimes =
-      allocaBytes 128 $ \ptr -> do
-        res <- c_get_sys_cpu_times ptr
-        if res <= 0
-          then do
-            putStrLn $ "c_get_sys_cpu_times: failure returned: " ++ (show res)
-            return $ CpuTimes 0 0 0
-          else
-            peek ptr
-    getSysInfo :: IO SystemInfo
-    getSysInfo =
-      allocaBytes 128 $ \ptr -> do
-        res <- c_get_system_info ptr
-        if res <= 0
-          then do
-            putStrLn $ "c_get_system_info: failure returned: " ++ (show res)
-            return $ SystemInfo 0 0 0 0 0 0
-          else
-            peek ptr
-
-
 
 readRessoureStatsInternal :: IO (Maybe ResourceStats)
 readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
@@ -314,15 +170,6 @@ readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
    nsToCenti :: GhcStats.RtsTime -> Word64
    nsToCenti = fromIntegral . (`div` 10000000)
 
-readProcStats :: ProcessId -> IO [Counter]
-readProcStats pid = do
-    cputimes <- getCpuTimes pid
-    return [ Counter StatInfo "Pid" (PureI $ fromIntegral pid)
-           , Counter StatInfo "UserTime" (Microseconds $ usertime cputimes)
-           , Counter StatInfo "SystemTime" (Microseconds $ systime cputimes)
-           , Counter StatInfo "StartTime" (Microseconds $ idletime cputimes)
-           , Counter StatInfo "CPUTime" (Microseconds $ (systime cputimes + usertime cputimes))
-           ]
 
 getCpuTimes :: ProcessId -> IO CpuTimes
 getCpuTimes pid =
@@ -334,32 +181,3 @@ getCpuTimes pid =
         return $ CpuTimes 0 0 0
       else
         peek ptr
-
-
-
-readProcIO :: ProcessId -> IO [Counter]
-readProcIO pid = do
-    ioinfo <- getIOInfo
-    return [ Counter IOCounter "Pid" (PureI $ fromIntegral pid)
-           , Counter IOCounter "ReadTransferCount" (Bytes $ fromIntegral (_readTransferCount ioinfo))
-           , Counter IOCounter "WriteTransferCount" (Bytes $ fromIntegral (_writeTransferCount ioinfo))
-           , Counter IOCounter "OtherTransferCount" (Bytes $ fromIntegral (_otherTransferCount ioinfo))
-           , Counter IOCounter "ReadOperationCount" (PureI $ fromIntegral (_readOperationCount ioinfo))
-           , Counter IOCounter "WriteOperationCount" (PureI $ fromIntegral (_writeOperationCount ioinfo))
-           , Counter IOCounter "OtherOperationCount" (PureI $ fromIntegral (_otherOperationCount ioinfo))
-           ]
-  where
-    getIOInfo :: IO IOCounters
-    getIOInfo =
-      allocaBytes 128 $ \ptr -> do
-        res <- c_get_io_counters ptr (fromIntegral pid)
-        if res <= 0
-          then do
-            putStrLn $ "c_get_io_counters: failure returned: " ++ (show res)
-            return $ IOCounters 0 0 0 0 0 0
-          else
-            peek ptr
-
-
-readProcNet :: ProcessId -> IO [Counter]
-readProcNet _pid = pure []

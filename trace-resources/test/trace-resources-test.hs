@@ -15,7 +15,7 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = localOption (QuickCheckTests 10) $ testGroup "trace-resources"
-    [ testProperty "resources available" $ playScript
+    [ testProperty "resources available" playScript
     ]
 
 -- | Plays a script in a single thread
@@ -32,10 +32,10 @@ playScript = ioProperty $ do
                       forwardTracer'
                       (Just ekgTracer')
                       "Test"
-                      (\ _ -> ["ResourceStats"])
-                      (\ _ -> Info)
-                      (\ _ -> Public)
-  configureTracers emptyTraceConfig docResourceStats [tr]                      
+                      (const ["ResourceStats"])
+                      (const Info)
+                      (const Public)
+  configureTracers emptyTraceConfig docResourceStats [tr]
   traceIt tr 10
 
 traceIt :: Trace IO ResourceStats -> Int -> IO Bool
