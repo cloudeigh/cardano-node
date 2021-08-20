@@ -19,6 +19,8 @@ import qualified GHC.Stats as GhcStats
 import           System.Win32.Process (ProcessId, getCurrentProcessId)
 import           System.Win32.Types
 
+import           Cardano.Logging.Resources.Types
+
 
 -- use PsAPI version 2
 #define PSAPI_VERSION 2
@@ -152,7 +154,7 @@ readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
   mem <- getMemoryInfo pid
   rts <- GhcStats.getRTSStats
   pure . Just $
-    Resources
+    ResourceStats
     { rCentiCpu   = usecsToCenti $ usertime cpu + systime cpu
     , rCentiGC    = nsToCenti $ GhcStats.gc_cpu_ns rts
     , rCentiMut   = nsToCenti $ GhcStats.mutator_cpu_ns rts
